@@ -1,0 +1,102 @@
+﻿@page "/calendar"
+@inject CalendarService service
+<div class="calendar-container">
+    <div class="calendar-header">
+        <button class="leftAr" type="button" @onclick="PrevMonth" />
+        <strong>@present.ToString("MMMM yyyy")</strong>
+        <button class="rightAr" type="button" @onclick="NextMonth"/>
+    </div>
+    <div class="day-container">
+        <div class="tiles-header">
+            <p>Su</p>
+        </div>
+        <div class="tiles-header">
+            <p>Mo</p>
+        </div>
+        <div class="tiles-header">
+            <p>Tu</p>
+        </div>
+        <div class="tiles-header">
+            <p>We</p>
+        </div>
+        <div class="tiles-header">
+            <p>Th</p>
+        </div>
+        <div class="tiles-header">
+            <p>Fr</p>
+        </div>
+        <div class="tiles-header">
+            <p>Sa</p>
+        </div>
+        @foreach(var o in Model)
+        {
+            if(!o.Empty)
+            {
+                <div class="tiles @(active = present.Day.Equals(o.Month.Day) ?"active" : "")" @onclick="@(() => Active(o.Month.Day))">
+                    <p>@o.Month.Day</p>
+                </div>
+            }
+            else
+            {
+                <div class="tiles empty">
+                    <p>@o.Month.Day</p>
+                </div>
+            }
+
+
+        }
+    </div>
+</div>
+@code {
+    [Parameter]
+    public EventCallback<DateTime> SelectedDate { get; set; }
+    [Parameter]
+    public int CurrentHour { get; set; }
+
+    private List<CustomCalendar> Model = new();
+    private DateTime present = new();   
+
+    private string active = string.Empty;
+
+    private void Active(int d)
+    {
+        present = new DateTime(present.Year, present.Month, d).AddHours(CurrentHour);
+        SelectedDate.InvokeAsync(present);
+    }
+
+    protected override void OnInitialized()
+    {
+        present = DateTime.Now.AddHours(-DateTime.Now.Hour)
+            .AddHours(11)
+            .AddMinutes(-DateTime.Now.Minute);
+
+        InitializedCalendar();
+    }
+    private void NextMonth()
+    {
+        AsignCurrentHour();
+        present = present.AddMonths(1);
+        InitializedCalendar();       
+    }
+    private void PrevMonth()
+    {
+        AsignCurrentHour();
+        present = present.AddMonths(-1);
+        InitializedCalendar();
+    }
+
+
+
+    private void AsignCurrentHour()
+    {
+        present = present.AddMinutes(-present.Minute)
+            .AddHours(-present.Hour)
+            .AddHours(CurrentHour);
+    }
+    private async void InitializedCalendar()
+    {
+        Model.Clear();
+        Model = await service.LoadCalendar(present);
+        await SelectedDate.InvokeAsync(present);
+    }
+}
